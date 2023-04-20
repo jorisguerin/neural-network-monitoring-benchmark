@@ -253,3 +253,36 @@ def plot_precision_recall_curve_oms(scores_test, scores_ood, labels_test, labels
     y_true = labs != preds
 
     return PrecisionRecallDisplay.from_predictions(y_true, y)
+
+
+def get_tnr_frac_tpr(scores, labels, preds, frac=0.95):
+
+    y_true = labels != preds
+    y_false = labels == preds
+
+    scores_correct = scores[y_true]
+    scores_wrong = scores[y_false]
+
+    scores_correct.sort()
+    limit = scores_correct[int((1 - frac) * len(scores_correct))]
+
+    excluded = np.count_nonzero(scores_wrong >= limit)
+    total = scores_wrong.shape[0]
+
+    tnr = 1 - (excluded / total)
+
+    return tnr
+
+
+def get_average_precision(scores, labels, preds):
+
+    y_true = labels != preds
+
+    return average_precision_score(y_true, scores)
+
+
+def get_auroc(scores, labels, preds):
+
+    y_true = labels != preds
+
+    return roc_auc_score(y_true, scores)

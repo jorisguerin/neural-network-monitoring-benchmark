@@ -311,8 +311,9 @@ class GaussianMixtureMonitor:
         :param dataset:
         :param network:
         :param layer_index:
-        :param n_components: Either an integer or "auto_knee" or "auto_bic"
-        :param constraint: Either "full", "diag", "tied", "spherical" or "auto_bic"
+        :param n_components: Either an integer or "auto_knee" or "auto_bic" or
+                             a list of integer of the same size as the number of classes
+        :param constraint: Either "full", "diag", "tied", "spherical" or "auto_bic" or a list of string constraints
         :param is_cv: if n_components or constraint are tuned automatically, is_cv will determine whether
                       the training set should be split for the hyperparameter tuning procedure
         """
@@ -361,7 +362,8 @@ class GaussianMixtureMonitor:
             for i in range(self.n_classes):
                 gmm = GaussianMixture(n_components=self.n_components[i], covariance_type=self.constraints[i])
                 self.gmm.append(gmm.fit(features[predictions == i]))
-            self._save_params(self.gmm, self.file_name)
+            if save:
+                self._save_params(self.gmm, self.file_name)
 
     def predict(self, features, predictions):
         scores = np.zeros([features.shape[0]])
@@ -377,21 +379,27 @@ class GaussianMixtureMonitor:
 
     def _check_accepted_params(self):
         if not np.issubdtype(type(self.n_components_type), np.integer):
-            if self.n_components_type not in accepted_n_comp:
-                raise ValueError("Accepted n_components values are either int or one of: %s"
+            if (type(self.n_components_type) is not list) and (self.n_components_type not in accepted_n_comp):
+                raise ValueError("Accepted n_components values are either int, list of ints or one of: %s"
                                  % str(accepted_n_comp)[1:-1])
-        if self.constraint_type not in accepted_constraints:
-            raise ValueError("Accepted constraint values are : %s"
-                             % str(accepted_constraints)[1:-1])
+        if type(self.constraint_type) is not list:
+            if self.constraint_type not in accepted_constraints:
+                raise ValueError("Accepted constraint values are : %s"
+                                 % str(accepted_constraints)[1:-1])
 
     def _tune_hyperparameters(self, features, predictions):
-        if np.issubdtype(type(self.n_components_type), np.integer):
+        if type(self.n_components_type) is list:
+            n_components = self.n_components_type
+        elif np.issubdtype(type(self.n_components_type), np.integer):
             values_n_comp = [self.n_components_type]
             n_components = [self.n_components_type] * self.n_classes
         else:
             values_n_comp = gmm_n_comp_values
             n_components = []
-        if "auto" not in self.constraint_type:
+
+        if type(self.constraint_type) is list:
+            constraints = self.constraint_type
+        elif "auto" not in self.constraint_type:
             values_constraints = [self.constraint_type]
             constraints = [self.constraint_type] * self.n_classes
         else:

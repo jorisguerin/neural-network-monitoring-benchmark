@@ -35,3 +35,5 @@ class Boxes:
             all_scores.append(b.score(points))
 
         return np.min(all_scores, axis=0)
+
+# def select_parameters_gmm():
