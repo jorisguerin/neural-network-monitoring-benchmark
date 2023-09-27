@@ -39,18 +39,31 @@ See *dataset.py* for a more detailed documentation.
 
 <details>
 <summary><b>FeatureExtractor</b></summary>
-
+The FeatureExtractor class plays a pivotal role in this benchmarking library, responsible for efficiently extracting various essential components from the dataset. It enables the extraction of:
+ * Data Features
+ * Logits
+ * Softmax values
+ * Predictions
+ * Labels
 </details> 
 
 <details>
 <summary><b>Monitor</b></summary>
-
+The Monitor class represents different monitoring approaches. It encompasses various monitoring methods with different functionalities.
 </details>
 
 <details>
 <summary><b>Evaluator</b></summary>
+The Evaluator class calculates performance metrics to assess the effectiveness of monitoring methods. It computes key metrics like AUROC (Area Under the Receiver Operating Characteristic curve), AUPR (Area Under the Precision-Recall curve), and TNR95TPR (True Negative Rate at 95% True Positive Rate).
 
 </details>
+<summary><b>logit transform comparison</b></summary>
+
+In this section, we introduce the monitors_logits library. It leverages logit-based approaches to monitor neural network predictions. We have unified the scores to ensure that higher scores indicate rejection.
+
+* Optimal Hyperparameter Tuning: We use the Nemenyi test to find the optimal hyperparameter values for each monitor.
+* Monitor Comparison: Wilcoxon tests are employed to compare the performance of different monitors, with further analysis using the Nemenyi test for multiple comparisons.
+
 
 
 ### References
