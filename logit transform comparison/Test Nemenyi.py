@@ -1,7 +1,7 @@
 # Import necessary libraries and modules.
 from dataset import Dataset
 from feature_extractor import *
-from monitors import *
+from monitors_logits import *
 from evaluation import Evaluator
 import torch
 from models import resnet

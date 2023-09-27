@@ -1,6 +1,6 @@
 from dataset import Dataset
 from feature_extractor import *
-from monitors import *
+from monitors_logits import *
 from evaluation import Evaluator
 import torch
 from models import *
@@ -8,10 +8,11 @@ import pandas as pd
 import os
 import csv
 
+
 batch_size = 10
 device_name = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
-
+#Data  id
 all_id_datasets = ["cifar10", "svhn", "cifar100"]
 
 all_ood_dataset = [["cifar100", "svhn", "lsun"],

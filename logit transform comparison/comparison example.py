@@ -4,8 +4,8 @@
 from dataset import Dataset
 from feature_extractor import *
 from feature_extractor import FeatureExtractor
-from monitors import GaussianMixtureMonitor, Doctor
-from monitors import *
+from monitors import Doctor
+from monitors_logits import *
 from evaluation import Evaluator
 import torch
 from models import resnet
