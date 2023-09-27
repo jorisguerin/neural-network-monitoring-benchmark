@@ -59,6 +59,8 @@ The Evaluator class calculates performance metrics to assess the effectiveness o
 
 </details>
 
+## Experiments using the library 
+
 <details>
 <summary><b>logit transform comparison</b></summary>
 
@@ -66,6 +68,8 @@ In this section, we introduce the monitors_logits library. It leverages logit-ba
 
 * Optimal Hyperparameter Tuning: We use the Nemenyi test to find the optimal hyperparameter values for each monitor.
 * Monitor Comparison: Wilcoxon tests are employed to compare the performance of different monitors, with further analysis using the Nemenyi test for multiple comparisons.
+
+
 
 </details>
 
