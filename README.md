@@ -1,9 +1,12 @@
 # Neural Network Runtime Monitoring
+
 A library to benchmark neural network runtime monitoring approaches on popular computer vision datasets 
 
 ## Install
 
-The installation proposed here is based on conda.
+### Installation using Anaconda
+
+The installation proposed here is based on `conda`.
 
 *To install conda on your machine you can follow [this site](https://doc.ubuntu-fr.org/miniconda)*.
  
@@ -15,6 +18,10 @@ Then, you simply need to:
 * Activate the environment
 
         $ conda activate neural-network-monitoring-benchmark
+
+### Installation using pip
+
+TODO
 
 ## Overview
 

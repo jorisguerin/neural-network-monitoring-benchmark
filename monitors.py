@@ -226,7 +226,7 @@ class OutsideTheBoxMonitor:
 
     def _check_accepted_params(self):
         if not np.issubdtype(type(self.n_clusters_type), np.integer):
-            if self.n_clusters_type is not "auto":
+            if self.n_clusters_type != "auto":
                 raise ValueError("Accepted n_clusters values are either int or \"auto\"")
 
     def _tune_hyperparameters(self, features, labels):

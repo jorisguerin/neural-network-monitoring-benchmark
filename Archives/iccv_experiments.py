@@ -7,7 +7,7 @@ from dataset import Dataset
 from feature_extractor import FeatureExtractor
 from evaluation import Evaluator
 from monitors import OutsideTheBoxMonitor, GaussianMixtureMonitor, MaxSoftmaxProbabilityMonitor, MaxLogitMonitor, \
-    EnergyMonitor, ReActMonitor
+    EnergyMonitor, ReActMonitor, MahalanobisMonitor
 
 from sklearn.metrics import accuracy_score
 
@@ -39,13 +39,15 @@ header = ["Model", "Layer",
 save_results_path = "Results/ICCV/"
 if not os.path.exists(save_results_path):
     os.makedirs(save_results_path)
-f = open(save_results_path + "Expe_02022023.csv", "w", encoding="UTF8")
+f = open(save_results_path + "full_results.csv", "w", encoding="UTF8")
 writer = csv.writer(f)
 writer.writerow(header)
 
 # Parameters experiments
 cov_constraints = ["full", "diag", "tied", "spherical"]
-n_clusters = [1, 2, 3, 5, 10]
+n_clusters = [1, 2, 3, 5, 7]
+react_clip = [0.8, 0.9, 0.95, 0.99]
+
 
 for i in range(len(all_models)):
     model = all_models[i]
@@ -118,6 +120,23 @@ for i in range(len(all_models)):
                             aupr, auroc, tnr95tpr]
                     writer.writerow(data)
 
+                monitor = MahalanobisMonitor(id_dataset, model, layer)
+                monitor.fit(features_train[0], pred_train, lab_train, save=True)
+
+                scores_test = monitor.predict(features_test[0], pred_test)
+                scores_ood = monitor.predict(features_ood[0], pred_ood)
+
+                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+
+                data = [model, layer,
+                        id_dataset, ood_dataset, str(None), str(None),
+                        id_accuracy, ood_accuracy,
+                        "Mahalanobis", str(None), str(None),
+                        aupr, auroc, tnr95tpr]
+                writer.writerow(data)
+
                 monitor = MaxSoftmaxProbabilityMonitor()
                 monitor.fit()
 
@@ -135,22 +154,23 @@ for i in range(len(all_models)):
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99, mode="msp")
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip, mode="msp")
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_MSP", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(None), str(None),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_MSP", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
                 monitor = EnergyMonitor(temperature=1)
                 monitor.fit()
@@ -169,22 +189,23 @@ for i in range(len(all_models)):
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99)
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip)
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_Energy", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(None), str(None),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_Energy", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
             for k in range(len(all_perturbations)):
                 ood_dataset = id_dataset
@@ -253,6 +274,23 @@ for i in range(len(all_models)):
                             aupr, auroc, tnr95tpr]
                     writer.writerow(data)
 
+                monitor = MahalanobisMonitor(id_dataset, model, layer)
+                monitor.fit(features_train[0], pred_train, lab_train, save=True)
+
+                scores_test = monitor.predict(features_test[0], pred_test)
+                scores_ood = monitor.predict(features_ood[0], pred_ood)
+
+                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+
+                data = [model, layer,
+                        id_dataset, ood_dataset, str(additional_transform), str(None),
+                        id_accuracy, ood_accuracy,
+                        "Mahalanobis", str(None), str(None),
+                        aupr, auroc, tnr95tpr]
+                writer.writerow(data)
+
                 monitor = MaxSoftmaxProbabilityMonitor()
                 monitor.fit()
 
@@ -264,28 +302,29 @@ for i in range(len(all_models)):
                 tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
                 data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
+                        id_dataset, ood_dataset, str(additional_transform), str(None),
                         id_accuracy, ood_accuracy,
                         "MSP", str(None), str(None),
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99, mode="msp")
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip, mode="msp")
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_MSP", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(additional_transform), str(None),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_MSP", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
                 monitor = EnergyMonitor(temperature=1)
                 monitor.fit()
@@ -298,28 +337,29 @@ for i in range(len(all_models)):
                 tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
                 data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
+                        id_dataset, ood_dataset, str(additional_transform), str(None),
                         id_accuracy, ood_accuracy,
                         "Energy", str(None), str(None),
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99)
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip)
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_Energy", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(additional_transform), str(None),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_Energy", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
             for k in range(len(all_attacks)):
                 ood_dataset = id_dataset
@@ -388,6 +428,23 @@ for i in range(len(all_models)):
                             aupr, auroc, tnr95tpr]
                     writer.writerow(data)
 
+                monitor = MahalanobisMonitor(id_dataset, model, layer)
+                monitor.fit(features_train[0], pred_train, lab_train, save=True)
+
+                scores_test = monitor.predict(features_test[0], pred_test)
+                scores_ood = monitor.predict(features_ood[0], pred_ood)
+
+                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+
+                data = [model, layer,
+                        id_dataset, ood_dataset, str(None), str(adversarial_attack),
+                        id_accuracy, ood_accuracy,
+                        "Mahalanobis", str(None), str(None),
+                        aupr, auroc, tnr95tpr]
+                writer.writerow(data)
+
                 monitor = MaxSoftmaxProbabilityMonitor()
                 monitor.fit()
 
@@ -399,28 +456,29 @@ for i in range(len(all_models)):
                 tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
                 data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
+                        id_dataset, ood_dataset, str(None), str(adversarial_attack),
                         id_accuracy, ood_accuracy,
                         "MSP", str(None), str(None),
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99, mode="msp")
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip, mode="msp")
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_MSP", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(None), str(adversarial_attack),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_MSP", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
                 monitor = EnergyMonitor(temperature=1)
                 monitor.fit()
@@ -433,27 +491,28 @@ for i in range(len(all_models)):
                 tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
                 data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
+                        id_dataset, ood_dataset, str(None), str(adversarial_attack),
                         id_accuracy, ood_accuracy,
                         "Energy", str(None), str(None),
                         aupr, auroc, tnr95tpr]
                 writer.writerow(data)
 
-                monitor = ReActMonitor(quantile_value=0.99)
-                monitor.fit(feature_extractor, features_train[-1])
+                for clip in react_clip:
+                    monitor = ReActMonitor(quantile_value=clip)
+                    monitor.fit(feature_extractor, features_train[-1])
 
-                scores_test = monitor.predict(features_test[-1])
-                scores_ood = monitor.predict(features_ood[-1])
+                    scores_test = monitor.predict(features_test[-1])
+                    scores_ood = monitor.predict(features_ood[-1])
 
-                aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
-                auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
-                tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
+                    aupr = eval_oms.get_average_precision(-scores_test, -scores_ood)
+                    auroc = eval_oms.get_auroc(-scores_test, -scores_ood)
+                    tnr95tpr = eval_oms.get_tnr_frac_tpr_oms(-scores_test, -scores_ood, frac=0.95)
 
-                data = [model, layer,
-                        id_dataset, ood_dataset, str(None), str(None),
-                        id_accuracy, ood_accuracy,
-                        "ReAct_Energy", str(None), str(None),
-                        aupr, auroc, tnr95tpr]
-                writer.writerow(data)
+                    data = [model, layer,
+                            id_dataset, ood_dataset, str(None), str(adversarial_attack),
+                            id_accuracy, ood_accuracy,
+                            "ReAct_Energy", str(None), clip,
+                            aupr, auroc, tnr95tpr]
+                    writer.writerow(data)
 
 f.close()

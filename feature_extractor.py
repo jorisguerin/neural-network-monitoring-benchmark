@@ -303,7 +303,7 @@ class FeatureExtractor:
         """Loads ResNet models."""
         self.model = models.ResNet34(num_c=self.n_classes_id)
         self.model.load_state_dict(torch.load(models_path + self._model_dataset_name + ".pth",
-                                              map_location=self.device_name))
+                                              map_location=self.device_name))  
         self.linear_weights = self.model.linear.weight.cpu().detach().numpy()
         self.linear_bias = self.model.linear.bias.cpu().detach().numpy()
 
@@ -311,7 +311,7 @@ class FeatureExtractor:
         """Loads DenseNet models."""
         self.model = models.DenseNet3(100, self.n_classes_id)
         self.model.load_state_dict(torch.load(models_path + self._model_dataset_name + ".pth",
-                                              map_location=self.device_name))
+                                              map_location=self.device_name))  
 
         self.linear_weights = self.model.fc.weight.cpu().detach().numpy()
         self.linear_bias = self.model.fc.bias.cpu().detach().numpy()

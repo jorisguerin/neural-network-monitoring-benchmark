@@ -1,8 +1,13 @@
+'''
+##
+## Old version of utils_nn.py
+##
+ 
 import requests
 
 
 def download_file_from_google_drive(gd_id, destination):
-    url = "https://docs.google.com/uc?export=download"
+    url = "https://docs.google.com/uc?export=download&confirm=1"
 
     session = requests.Session()
 
@@ -31,3 +36,11 @@ def save_response_content(response, destination):
         for chunk in response.iter_content(chunk_size):
             if chunk:  # filter out keep-alive new chunks
                 f.write(chunk)
+'''
+
+import gdown
+
+def download_file_from_google_drive(gd_id, destination):
+    url = gd_id #"https://drive.google.com/uc?id=" + gd_id
+    out = destination
+    gdown.download(url, out, quiet=False)

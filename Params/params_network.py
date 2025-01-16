@@ -142,11 +142,20 @@ layers = {
                  'relu': 'layer99'}
 }
 
+# models_gdrive_ids = {
+#     "resnet_cifar10": "18_LAfCF4qa7jCDmITcqYD8A9yUgedqlh",
+#     "resnet_cifar100": "1vXI4BLXoeo_jEC2IE3geOwdrowA6-Xwa",
+#     "resnet_svhn": "1S5BIC2DCr_1phv8SFn0APtIs6dD8QxQ2",
+#     "densenet_cifar10": "1I2NAlgeNdMqVKgYeTkXIOol5Wge2Intg",
+#     "densenet_cifar100": "1HKvyBHPYFIEBId_eBW5K0x97IrzEaehF",
+#     "densenet_svhn": "1XldtdXjDVpgjxGZxueNrZJWxls34OTWn"
+# }
+
 models_gdrive_ids = {
-    "resnet_cifar10": "18_LAfCF4qa7jCDmITcqYD8A9yUgedqlh",
-    "resnet_cifar100": "1vXI4BLXoeo_jEC2IE3geOwdrowA6-Xwa",
-    "resnet_svhn": "1S5BIC2DCr_1phv8SFn0APtIs6dD8QxQ2",
-    "densenet_cifar10": "1I2NAlgeNdMqVKgYeTkXIOol5Wge2Intg",
-    "densenet_cifar100": "1HKvyBHPYFIEBId_eBW5K0x97IrzEaehF",
-    "densenet_svhn": "1XldtdXjDVpgjxGZxueNrZJWxls34OTWn"
+    "densenet_svhn"    : "175ylKUpg2FsbpvJgTbgMZYqvMSi-0AuP",
+    "densenet_cifar10" : "1jcLBFT5BwGCK5RmoH20Z9z7pJ0L5BuI9",
+    "densenet_cifar100": "1MaHSOZZb357JDtWfbQ7UbOOh8oGda5OX",
+    "resnet_svhn"      : "1XiF6uw1Pz-aPoKmVcxlUs9ggmnkQMQlz",
+    "resnet_cifar10"   : "1Rv0D1mp831raV2nZ28W-SCwNXYFu_N9o",
+    "resnet_cifar100"  : "1UIQ8zRFeSMnkMyFXQ2AEoUWFU4LUZEfi",
 }
