@@ -4,8 +4,8 @@ __pycache__/
 
 /Data/
 /Features/
-/Models/
-/Monitors/
+/Models/saves/
+/Monitors/saves/
 /Results/
 /.ipynb_checkpoints/
 /.idea/
