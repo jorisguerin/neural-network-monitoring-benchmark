@@ -9,7 +9,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
-from Params.params_network import *
+from Params.params_networks import *
 from Params.params_monitors import *
 
 from Utils.utils_monitors import Box, Boxes
@@ -174,7 +174,7 @@ class OutsideTheBoxMonitor:
         self.is_cv = is_cv
 
         layer_name = list(layers[network].items())[layer_index][0]
-        self.file_name = save_monitors_path + "otb_%s_%s_%s_%s.p" % (n_clusters, dataset, network, layer_name)
+        self.file_name = path_to_saved_monitors + "otb_%s_%s_%s_%s.p" % (n_clusters, dataset, network, layer_name)
 
         self.boxes = [Boxes() for _ in range(self.n_classes)]
 
@@ -195,8 +195,8 @@ class OutsideTheBoxMonitor:
             labels = labels[correct_indices]
             predictions = predictions[correct_indices]
 
-        if not os.path.exists(save_monitors_path):
-            os.makedirs(save_monitors_path)
+        if not os.path.exists(path_to_saved_monitors):
+            os.makedirs(path_to_saved_monitors)
 
         if os.path.exists(self.file_name) and save:
             self.boxes = self._load_params(self.file_name)
@@ -275,9 +275,9 @@ class MahalanobisMonitor:
 
         layer_name = list(layers[network].items())[layer_index][0]
         if is_tied:
-            self.file_name = save_monitors_path + "mahalanobisTied_%s_%s_%s.h5" % (dataset, network, layer_name)
+            self.file_name = path_to_saved_monitors + "mahalanobisTied_%s_%s_%s.h5" % (dataset, network, layer_name)
         else:
-            self.file_name = save_monitors_path + "mahalanobisFree_%s_%s_%s.h5" % (dataset, network, layer_name)
+            self.file_name = path_to_saved_monitors + "mahalanobisFree_%s_%s_%s.h5" % (dataset, network, layer_name)
 
         self._check_accepted_dataset()
         self.n_classes = n_classes_dataset[dataset]
@@ -302,8 +302,8 @@ class MahalanobisMonitor:
             labels = labels[correct_indices]
             predictions = predictions[correct_indices]
 
-        if not os.path.exists(save_monitors_path):
-            os.makedirs(save_monitors_path)
+        if not os.path.exists(path_to_saved_monitors):
+            os.makedirs(path_to_saved_monitors)
 
         if os.path.exists(self.file_name) and save:
             self.mean, self.precision = self._load_params(self.file_name)
@@ -394,7 +394,7 @@ class GaussianMixtureMonitor:
         self.is_cv = is_cv
 
         layer_name = list(layers[network].items())[layer_index][0]
-        self.file_name = save_monitors_path + "gmm_%s_%s_%s_%s_%s.p" % (n_components, constraint,
+        self.file_name = path_to_saved_monitors + "gmm_%s_%s_%s_%s_%s.p" % (n_components, constraint,
                                                                         dataset, network, layer_name)
 
         self.gmm = None
@@ -416,8 +416,8 @@ class GaussianMixtureMonitor:
             labels = labels[correct_indices]
             predictions = predictions[correct_indices]
 
-        if not os.path.exists(save_monitors_path):
-            os.makedirs(save_monitors_path)
+        if not os.path.exists(path_to_saved_monitors):
+            os.makedirs(path_to_saved_monitors)
 
         if os.path.exists(self.file_name) and save:
             self.gmm = self._load_params(self.file_name)
@@ -448,9 +448,9 @@ class GaussianMixtureMonitor:
                 raise ValueError("Accepted n_components values are either int, list of ints or one of: %s"
                                  % str(accepted_n_comp)[1:-1])
         if type(self.constraint_type) is not list:
-            if self.constraint_type not in accepted_constraints:
+            if self.constraint_type not in accepted_constr:
                 raise ValueError("Accepted constraint values are : %s"
-                                 % str(accepted_constraints)[1:-1])
+                                 % str(accepted_constr)[1:-1])
 
     def _tune_hyperparameters(self, features, predictions):
         if type(self.n_components_type) is list:
@@ -468,7 +468,7 @@ class GaussianMixtureMonitor:
             values_constraints = [self.constraint_type]
             constraints = [self.constraint_type] * self.n_classes
         else:
-            values_constraints = gmm_constraints_values
+            values_constraints = gmm_constr_values
             constraints = []
 
         if min(len(n_components), len(constraints)) == 0:

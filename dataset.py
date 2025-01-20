@@ -6,7 +6,7 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 
-from Params.params_dataset import *
+from Params.params_datasets import *
 
 #test
 

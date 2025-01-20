@@ -1,19 +1,19 @@
-import os
 
-from tqdm import tqdm
 import h5py
+import os
+import numpy as np
+import torch
+import torchattacks
+from torchvision.models.feature_extraction import create_feature_extractor
+from tqdm import tqdm
+from scipy.special import softmax
+
 from Utils.utils_nn import download_file_from_google_drive
 
-import numpy as np
-from scipy.special import softmax
-import torch
-from torchvision.models.feature_extraction import create_feature_extractor
-import torchattacks
+import Models
 
-import models
-
-from Params.params_network import *
-from Params.params_dataset import *
+from Params.params_networks import *
+from Params.params_datasets import *
 
 # import warnings
 # warnings.filterwarnings("ignore")
@@ -67,11 +67,13 @@ class FeatureExtractor:
 
         self.linear_weights, self.linear_bias = None, None
 
-        if not os.path.exists(models_path):
-            os.makedirs(models_path)
+        if not os.path.exists(path_to_saved_models):
+            os.makedirs(path_to_saved_models)
+        print("Je commence l'extraction")
         self._model_dataset_name = self.network + "_" + self.id_dataset
         self._load_model()
         self.model.eval()
+        print("J'ai fini")
         self.model.to(self._device)
 
     def get_features(self, dataset, save=True):
@@ -85,8 +87,8 @@ class FeatureExtractor:
         Returns:
             features, logits, softmax_values, predictions, labels (np.arrays)
         """
-        if not os.path.exists(save_features_path):
-            os.makedirs(save_features_path)
+        if not os.path.exists(path_to_saved_features):
+            os.makedirs(path_to_saved_features)
 
         predictions = None
         logits = None
@@ -105,7 +107,7 @@ class FeatureExtractor:
             elif dataset.adversarial_attack is not None:
                 perturbations += "_" + dataset.adversarial_attack
 
-            file_name = save_features_path + "%s_%s%s__%s_%s_%s.h5" % (dataset.name, dataset.split,
+            file_name = path_to_saved_features + "%s_%s%s__%s_%s_%s.h5" % (dataset.name, dataset.split,
                                                                        perturbations,
                                                                        dataset.network, self.id_dataset, l)
             if os.path.exists(file_name):
@@ -287,9 +289,9 @@ class FeatureExtractor:
 
     def _load_model(self):
         """Loads the network."""
-        if not os.path.exists(models_path + self._model_dataset_name + ".pth"):
+        if not os.path.exists(path_to_saved_models + self._model_dataset_name + ".pth"):
             gd_id = models_gdrive_ids[self._model_dataset_name]
-            destination = models_path + self._model_dataset_name + ".pth"
+            destination = path_to_saved_models + self._model_dataset_name + ".pth"
             download_file_from_google_drive(gd_id, destination)
 
         if self.network == "resnet":
@@ -301,16 +303,16 @@ class FeatureExtractor:
 
     def _load_resnet(self):
         """Loads ResNet models."""
-        self.model = models.ResNet34(num_c=self.n_classes_id)
-        self.model.load_state_dict(torch.load(models_path + self._model_dataset_name + ".pth",
+        self.model = Models.ResNet34(num_c=self.n_classes_id)
+        self.model.load_state_dict(torch.load(path_to_saved_models + self._model_dataset_name + ".pth",
                                               map_location=self.device_name))  
         self.linear_weights = self.model.linear.weight.cpu().detach().numpy()
         self.linear_bias = self.model.linear.bias.cpu().detach().numpy()
 
     def _load_densenet(self):
         """Loads DenseNet models."""
-        self.model = models.DenseNet3(100, self.n_classes_id)
-        self.model.load_state_dict(torch.load(models_path + self._model_dataset_name + ".pth",
+        self.model = Models.DenseNet3(100, self.n_classes_id)
+        self.model.load_state_dict(torch.load(path_to_saved_models + self._model_dataset_name + ".pth",
                                               map_location=self.device_name))  
 
         self.linear_weights = self.model.fc.weight.cpu().detach().numpy()

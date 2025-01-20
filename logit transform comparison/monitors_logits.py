@@ -9,7 +9,7 @@ from sklearn.mixture import GaussianMixture
 from sklearn.cluster import KMeans
 from kneed import KneeLocator
 
-from Params.params_network import *
+from Params.params_networks import *
 from Params.params_monitors import *
 
 from Utils.utils_monitors import Box, Boxes

@@ -3,8 +3,10 @@ __pycache__/
 *.py[cod]
 
 /Data/
-/Models/
 /Features/
+/Models/
+/Monitors/
+/Results/
 /.ipynb_checkpoints/
 /.idea/
-/Monitors/
+
