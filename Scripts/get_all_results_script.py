@@ -79,8 +79,8 @@ for i in range(len(all_models)):
             eval_ood.fit_ground_truth(lab_test, lab_ood, pred_test, pred_ood)
 
             precision_star, recall_star, f1_star = eval_oms.get_metrics(
-                eval_ood.y_true[:lab_test.shape[0]].astype(bool),
-                eval_ood.y_true[lab_test.shape[0]:].astype(bool))
+                eval_ood.monitor_y_true[:lab_test.shape[0]].astype(bool),
+                eval_ood.monitor_y_true[lab_test.shape[0]:].astype(bool))
 
             for lay in range(2):
                 monitor = MahalanobisMonitor(id_dataset, model, lay, is_tied=True)
@@ -226,8 +226,8 @@ for i in range(len(all_models)):
             eval_ood.fit_ground_truth(lab_test, lab_ood, pred_test, pred_ood)
 
             precision_star, recall_star, f1_star = eval_oms.get_metrics(
-                eval_ood.y_true[:lab_test.shape[0]].astype(bool),
-                eval_ood.y_true[lab_test.shape[0]:].astype(bool))
+                eval_ood.monitor_y_true[:lab_test.shape[0]].astype(bool),
+                eval_ood.monitor_y_true[lab_test.shape[0]:].astype(bool))
 
             for lay in range(2):
                 monitor = MahalanobisMonitor(id_dataset, model, lay, is_tied=True)
@@ -373,8 +373,8 @@ for i in range(len(all_models)):
             eval_ood.fit_ground_truth(lab_test, lab_ood, pred_test, pred_ood)
 
             precision_star, recall_star, f1_star = eval_oms.get_metrics(
-                eval_ood.y_true[:lab_test.shape[0]].astype(bool),
-                eval_ood.y_true[lab_test.shape[0]:].astype(bool))
+                eval_ood.monitor_y_true[:lab_test.shape[0]].astype(bool),
+                eval_ood.monitor_y_true[lab_test.shape[0]:].astype(bool))
 
             for lay in range(2):
                 monitor = MahalanobisMonitor(id_dataset, model, lay, is_tied=True)

@@ -2,7 +2,7 @@ import numpy as np
 from .base_monitor import BaseMonitor
 
 
-class MaxSoftmaxProbabilityMonitor(BaseMonitor):
+class MSPMonitor(BaseMonitor):
     def __init__(self):
         pass
 

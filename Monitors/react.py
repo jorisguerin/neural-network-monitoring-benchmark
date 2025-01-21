@@ -4,7 +4,7 @@ from .base_monitor import BaseMonitor
 from .energy import EnergyMonitor
 from .doctor import DOCTOR
 from .max_logit import MaxLogitMonitor
-from .max_softmax import MaxSoftmaxProbabilityMonitor
+from .max_softmax import MSPMonitor
 from .odin import ODIN
 
 
@@ -36,7 +36,7 @@ class ReActMonitor(BaseMonitor):
                 monitor = EnergyMonitor()
                 inputs = modified_logits
             case "MSP":
-                monitor = MaxSoftmaxProbabilityMonitor()
+                monitor = MSPMonitor()
                 inputs = softmax(modified_logits, axis=1)
             case "DOCTOR alpha":
                 monitor = DOCTOR(mode="alpha")

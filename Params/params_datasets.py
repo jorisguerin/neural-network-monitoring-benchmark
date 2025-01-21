@@ -29,9 +29,9 @@ additional_transforms = {
 
 accepted_attacks = ["fgsm", "deepfool", "pgd"]
 
-datasets_path = "./Data"
-path_tinyImagenet = datasets_path + "/Imagenet_resize/"
-path_lsun = datasets_path + "/LSUN_resize/"
+path_to_saved_datasets = "./Data"
+path_to_tinyImagenet = path_to_saved_datasets + "/Imagenet_resize/"
+path_to_lsun = path_to_saved_datasets + "/LSUN_resize/"
 
 url_tinyImagenet = "https://www.dropbox.com/s/kp3my3412u5k9rl/Imagenet_resize.tar.gz?dl=1"
 url_lsun = "https://www.dropbox.com/s/moqh2wh8696c3yl/LSUN_resize.tar.gz?dl=1"

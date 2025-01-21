@@ -1,4 +1,3 @@
-
 import h5py
 import os
 import numpy as np
@@ -69,11 +68,9 @@ class FeatureExtractor:
 
         if not os.path.exists(path_to_saved_models):
             os.makedirs(path_to_saved_models)
-        print("Je commence l'extraction")
         self._model_dataset_name = self.network + "_" + self.id_dataset
         self._load_model()
         self.model.eval()
-        print("J'ai fini")
         self.model.to(self._device)
 
     def get_features(self, dataset, save=True):
@@ -100,12 +97,12 @@ class FeatureExtractor:
         features = [[] for _ in range(len(self.layers_id))]
         for i, l in enumerate(layers_names):
             perturbations = ""
-            if dataset.additional_transform is not None and dataset.adversarial_attack is not None:
-                perturbations += "_" + dataset.additional_transform + "_" + dataset.adversarial_attack
-            elif dataset.additional_transform is not None:
-                perturbations += "_" + dataset.additional_transform
-            elif dataset.adversarial_attack is not None:
-                perturbations += "_" + dataset.adversarial_attack
+            if dataset.data_transforms is not None and dataset.data_adv_attack is not None:
+                perturbations += "_" + dataset.data_transforms + "_" + dataset.data_adv_attack
+            elif dataset.data_transforms is not None:
+                perturbations += "_" + dataset.data_transforms
+            elif dataset.data_adv_attack is not None:
+                perturbations += "_" + dataset.data_adv_attack
 
             file_name = path_to_saved_features + "%s_%s%s__%s_%s_%s.h5" % (dataset.name, dataset.split,
                                                                        perturbations,
@@ -118,7 +115,7 @@ class FeatureExtractor:
 
         torch.cuda.empty_cache()
         if len(to_extract) != 0:
-            if dataset.adversarial_attack is None:
+            if dataset.data_adv_attack is None:
                 features_extracted, logits, softmax_values, predictions, labels = self._extract_features(dataset,
                                                                                                          to_extract,
                                                                                                          layers_names)
@@ -202,7 +199,7 @@ class FeatureExtractor:
         """
         print('Extracting layers: %s' % str([layers_names[i] for i in to_extract])[1:-1])
 
-        attacker = AdversarialAttack(dataset.adversarial_attack, self.model)
+        attacker = AdversarialAttack(dataset.data_adv_attack, self.model)
 
         features = [[] for _ in range(len(to_extract))]
         predicted_classes = []

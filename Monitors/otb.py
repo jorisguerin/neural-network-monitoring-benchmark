@@ -13,7 +13,7 @@ from Params.params_monitors import *
 from Utils.utils_monitors import Box, Boxes
 
 
-class OutsideTheBoxMonitor(BaseMonitor):
+class OTBMonitor(BaseMonitor):
     def __init__(self, dataset, network, layer_index, n_clusters=1, is_cv=True):
         """
         :param dataset:     The dataset to fit upon
