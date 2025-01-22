@@ -18,16 +18,16 @@ class Dataset:
         name (str): Name of the dataset.
         split (str): Split to load ("train" or "test").
         network (str): Network that will be used to process the dataset.
-        additional_transform (str or None): transform applied to images before going through the network.
-        adversarial_attack (str or None): attack applied to images before going through the network.
+        data_transforms (str or None): transform applied to images before going through the network.
+        data_adv_attack (str or None): attack applied to images before going through the network.
         batch_size (int): Batch size used to process the dataset.
 
     Attributes (public):
         name (str): Name.
         split (str): Split.
         network (str): Network.
-        additional_transform (str or None): Transform.
-        adversarial_attack (str or None): Attack.
+        data_transforms (str or None): Transform.
+        data_adv_attack (str or None): Attack.
         batch_size (int): Batch size.
         dataloader (torch dataloader): Dataloader object used by the neural network to process the dataset
     """
