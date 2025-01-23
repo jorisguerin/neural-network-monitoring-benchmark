@@ -1,7 +1,7 @@
 import numpy as np
 
 GMM_MIN_N_COMPONENTS_VALUES = 1
-GMM_MAX_N_COMPONENTS_VALUES = 3
+GMM_MAX_N_COMPONENTS_VALUES = 9
 
 path_to_saved_monitors = "./Monitors/saves/"
 

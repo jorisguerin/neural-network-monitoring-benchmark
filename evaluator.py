@@ -88,21 +88,21 @@ class Evaluator:
             raise ValueError("Scores must be continuous values, not booleans")
         else:
             if self.setting == "oms":
-                scores_OK = self.scores[self.y_true == 1]
+                scores_OK = self.scores[self.y_true]
                 scores_KO = self.scores[self.y_true == 0]
                 scores_OK.sort()
 
                 limit = scores_OK[int((1-frac)*len(scores_OK))]
-                exclu = np.count_nonzero(scores_KO >= limit)
+                exclu = np.count_nonzero(scores_KO > limit)
                 total = scores_KO.shape[0]
                 tnr = 1 - (exclu / total)
             else:
-                scores_id.sort()
+                scores_ood.sort()
+                limit = scores_ood[int((1-frac)*len(scores_ood))]
+                exclu = np.count_nonzero(scores_id > limit)
+                total = scores_id.shape[0]
+                tnr = 1 - (exclu / total)
 
-                limit = scores_id[int(1-frac)*len(scores_id)]
-                exclu = np.count_nonzero(scores_ood < limit)
-                total = scores_ood.shape[0]
-                tnr = exclu / total
             return tnr
 
     @staticmethod

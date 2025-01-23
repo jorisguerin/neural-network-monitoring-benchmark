@@ -88,7 +88,7 @@ class GMMMonitor(BaseMonitor):
         for i in range(self.n_classes):
             if np.count_nonzero(y_pred == i) > 0:
                 scores[y_pred == i] = self.gmm[i].score_samples(X[y_pred == i])
-        return scores
+        return -scores
 
     def _check_accepted_datasets(self):
         accepted_dataset = list(n_classes_dataset.keys())
