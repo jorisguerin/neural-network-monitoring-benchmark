@@ -132,7 +132,7 @@ class ThresholdOptDataset():
                                                     softmax_test,
                                                     pred_test,
                                                     lab_test,
-                                                    eval_oms_id.monitor_y_true,
+                                                    eval_oms_id.y_true,
                                                     test_size=1-self.split_ratio,
                                                     random_state=self.SEED,
                                                     shuffle=True)
@@ -149,7 +149,7 @@ class ThresholdOptDataset():
                                                     softmax_ood,
                                                     pred_ood,
                                                     lab_ood,
-                                                    eval_oms_ood.monitor_y_true,
+                                                    eval_oms_ood.y_true,
                                                     test_size=1-self.split_ratio,
                                                     random_state=self.SEED,
                                                     shuffle=True)
@@ -172,13 +172,13 @@ class ThresholdOptDataset():
                                                     softmax_test,
                                                     pred_test,
                                                     lab_test,
-                                                    eval_oms_id.monitor_y_true,
+                                                    eval_oms_id.y_true,
                                                     features_ood[0], ### for one layer
                                                     logits_ood,
                                                     softmax_ood,
                                                     pred_ood,
                                                     lab_ood,
-                                                    eval_oms_ood.monitor_y_true,
+                                                    eval_oms_ood.y_true,
                                                     test_size=1-self.split_ratio,
                                                     random_state=self.SEED,
                                                     shuffle=True)
@@ -273,13 +273,13 @@ class ThresholdOptDataset():
             self.softmax_case2_optimization = np.concatenate((self.softmax_case2_optimization, softmax_ood_tmp), axis=0)
             self.pred_case2_optimization = np.concatenate((self.pred_case2_optimization, pred_ood_tmp), axis=0)
             self.lab_case2_optimization = np.concatenate((self.lab_case2_optimization, lab_ood_tmp), axis=0)
-            self.y_true_case2_optimization = np.concatenate((self.y_true_case2_optimization, eval_oms.monitor_y_true), axis=0)
+            self.y_true_case2_optimization = np.concatenate((self.y_true_case2_optimization, eval_oms.y_true), axis=0)
             
             if self.save_flag_type: 
                 if other_ood_name in self.novelty_dataset[self.id_dataset]:
-                    flag_ood_tmp =  [f"Novelty_{other_ood_name}(Other)" for _ in range(len(eval_oms.monitor_y_true))]
+                    flag_ood_tmp =  [f"Novelty_{other_ood_name}(Other)" for _ in range(len(eval_oms.y_true))]
                 else: 
-                    flag_ood_tmp =  [f"{other_ood_name}_Other" for _ in range(len(eval_oms.monitor_y_true))]
+                    flag_ood_tmp =  [f"{other_ood_name}_Other" for _ in range(len(eval_oms.y_true))]
                 self.flag_type_case2_optimization += flag_ood_tmp
                 
     def _construct_optimizationset_case3(self):
@@ -329,13 +329,13 @@ class ThresholdOptDataset():
             self.softmax_case3_optimization = np.concatenate((self.softmax_case3_optimization, softmax_ood_tmp), axis=0)
             self.pred_case3_optimization = np.concatenate((self.pred_case3_optimization, pred_ood_tmp), axis=0)
             self.lab_case3_optimization = np.concatenate((self.lab_case3_optimization, lab_ood_tmp), axis=0)
-            self.y_true_case3_optimization = np.concatenate((self.y_true_case3_optimization, eval_oms.monitor_y_true), axis=0) 
+            self.y_true_case3_optimization = np.concatenate((self.y_true_case3_optimization, eval_oms.y_true), axis=0) 
            
             if self.save_flag_type: 
                 if other_ood_name in self.novelty_dataset[self.id_dataset]:
-                    flag_ood_tmp =  [f"Novelty_{other_ood_name}(Other)" for _ in range(len(eval_oms.monitor_y_true))]
+                    flag_ood_tmp =  [f"Novelty_{other_ood_name}(Other)" for _ in range(len(eval_oms.y_true))]
                 else: 
-                    flag_ood_tmp =  [f"{other_ood_name}_Other" for _ in range(len(eval_oms.monitor_y_true))]
+                    flag_ood_tmp =  [f"{other_ood_name}_Other" for _ in range(len(eval_oms.y_true))]
                 self.flag_type_case3_optimization += flag_ood_tmp
             
     def _check_accepted_dataset_expThreshOpt(self):

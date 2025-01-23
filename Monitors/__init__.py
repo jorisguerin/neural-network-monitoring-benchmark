@@ -5,5 +5,5 @@ from .max_softmax import MSPMonitor
 from .odin import ODIN
 from .react import ReActMonitor
 from .otb import OTBMonitor
-from .gmm import GaussianMixtureMonitor
+from .gmm import GMMMonitor
 from .mahalanobis import MahalanobisMonitor

@@ -64,6 +64,13 @@ class MahalanobisMonitor(BaseMonitor):
                 self._save_params(self.mean, self.precision, self.file_name)
 
     def predict(self, X, y_pred):
+        """
+        Compute the scores of the models predictions as the
+        log-likelihood values for each sample. The returned
+        values are negated so that a 'high' prediction score
+        means an abnormal sample whereas a 'low' prediction
+        score means a normal situation (no alarm).
+        """
         scores = np.zeros([X.shape[0]])
         maxlen = 1000
         for k in range(0, len(X), maxlen):

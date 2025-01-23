@@ -62,7 +62,7 @@ class Dataset:
         # Create dataloader
         self._load_dataset()
         self.dataloader = torch.utils.data.DataLoader(
-            self.name, 
+            self.dataset, 
             batch_size=self.batch_size, 
             shuffle=False, 
             num_workers=2

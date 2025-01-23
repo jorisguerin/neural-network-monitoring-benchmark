@@ -5,59 +5,54 @@ from feature_extractor import FeatureExtractor
 
 import os
 import csv
+import time
 from sklearn.metrics import accuracy_score
 
 
-
-all_models = ["resnet", "densenet"]
-all_id_datasets = [
-    "cifar10",
-    "svhn",
-    "cifar100",
-]
-all_ood_datasets = [
-    ["cifar100", "svhn", "lsun"],
-    ["cifar10", "tiny_imagenet", "lsun"],
-    ["cifar10", "svhn", "lsun"],
-]
-all_perturbations = [
-    "brightness",
-    "blur",
-    "pixelization",
-]
-all_adver_attacks = [
-    "fgsm",
-    "deepfool",
-    "pgd",
-]
-all_monitors = [
-    [MahalanobisMonitor, {}],
-    [OTBMonitor, {}],
-    [MSPMonitor, {}],
-    [EnergyMonitor, {'T': 1}],
-    [ReActMonitor, {'quantile_value': 0.99, 'mode':'MSP'}],
-    [ReActMonitor, {'quantile_value': 0.99, 'mode':'energy'}],
-]
+EVAL_CONFIG_TEMPLATE = {
+    'network': 'densenet',
+    'network_layers': [98],
+    'dataset': 'cifar10',
+    'dataset_ood': 'cifar100',
+    'monitor': None,
+    'monitor_train_params': None,
+    'monitor_infer_params': None,
+    'perturbation': None,
+    'adver_attack': None,
+    'batch_size': 100,
+    'TORCH_DEVICE': None,
+    'evaluation_mode': 'oms',
+    'evaluation_metrics': [],
+    'is_train_timed': True,
+    'is_infer_timed': True,
+}
 
 
-def evaluate_one_monitor(
-        model,
-        id_dataset,
-        ood_dataset,
-        perturbation=None,
-        adver_attack=None,
-        eval_mode="oms",
-        batch_size=10,
-        layer_ids=None,
-        device_name=None,
-):
+def evaluate_monitor(config):
     """
     """
-    dataset_train = Dataset(id_dataset, "train", model, batch_size=batch_size)
-    dataset_test = Dataset(id_dataset, "test", model, batch_size=batch_size)
-    dataset_ood = Dataset(ood_dataset, "test", model, perturbation, adver_attack, batch_size=batch_size)
+    dataset_train = Dataset(
+        config['dataset'], 
+        "train", 
+        config['network'], 
+        batch_size=config['batch_size']
+    )
+    dataset_test = Dataset(
+        config['dataset'], 
+        "test", 
+        config['network'], 
+        batch_size=config['batch_size']
+    )
+    dataset_ood = Dataset(
+        config['dataset_ood'], 
+        "test", 
+        config['network'], 
+        config['perturbation'], 
+        config['adver_attack'], 
+        batch_size=config['batch_size']
+    )
 
-    feature_extractor = FeatureExtractor(model, id_dataset, layer_ids, device_name)
+    feature_extractor = FeatureExtractor(config['network'], config['dataset'], config['network_layers'], config['TORCH_DEVICE'])
 
     (features_train, logits_train, softmax_train, 
      preds_train, labels_train) = feature_extractor.get_features(dataset_train)
@@ -66,91 +61,56 @@ def evaluate_one_monitor(
     (features_ood, logits_ood, softmax_ood,
      preds_ood, labels_ood) = feature_extractor.get_features(dataset_ood)
     
-    evaluator = Evaluator(eval_mode, is_novelty=(id_dataset != ood_dataset))
+    evaluator = Evaluator(config['evaluation_mode'], is_novelty=(config['dataset'] != config['dataset_ood']))
     evaluator.fit_ground_truth(labels_test, labels_ood, preds_test, preds_ood)
 
+    monitor = config['monitor']
+    results = {}
 
-
-def evaluate_all_monitors(
-        model,
-        layer_ids,
-        batch_size,
-        id_dataset,
-        ood_dataset,
-        eval_settings,
-        perturbation=None,
-        adver_attack=None,
-        device_name=None,
-):
-    """
-    """
-    dataset_train = Dataset(id_dataset, "train", model, batch_size=batch_size)
-    dataset_test = Dataset(id_dataset, "test", model, batch_size=batch_size)
-    dataset_ood = Dataset(ood_dataset, "test", model, perturbation, adver_attack, batch_size=batch_size)
-
-    feature_extractor = FeatureExtractor(model, id_dataset, layer_ids, device_name)
-
-    (features_train, logits_train, softmax_train, 
-     preds_train, labels_train) = feature_extractor.get_features(dataset_train)
-    (features_test, logits_test, softmax_test,
-     preds_test, labels_test) = feature_extractor.get_features(dataset_test)
-    (features_ood, logits_ood, softmax_ood,
-     preds_ood, labels_ood) = feature_extractor.get_features(dataset_ood)
-    
-    # Compute the model accuracy scores
-    id_acc = accuracy_score(labels_test, preds_test)
-    if id_dataset == ood_dataset:
-        ood_acc = accuracy_score(labels_ood, preds_ood)
+    if config['is_train_timed']:
+        t0_train = time.time()
+    if config['monitor_train_params']:
+        monitor.fit(features_train[0], preds_train, labels_train)
     else:
-        ood_acc = 0
+        monitor.fit()
+    if config['is_train_timed']:
+        t1_train = time.time()
 
-    # Define the OOD and OMS evaluators
-    if 'oms' in eval_settings:
-        eval_oms = Evaluator("oms", is_novelty=(id_dataset!=ood_dataset))
-        eval_oms.fit_ground_truth(labels_test, labels_ood, preds_test, preds_ood)
-    if 'ood' in eval_settings:
-        eval_ood = Evaluator("ood", is_novelty=(id_dataset!=ood_dataset))
-        eval_ood.fit_ground_truth(labels_test, labels_ood, preds_test, preds_ood)
+    if config['is_infer_timed']:
+        t0_infer = time.time()
+    match config['monitor_infer_params']:
+        case 'features':
+            scores_test = monitor.predict(features_test[0], preds_test)
+            scores_ood  = monitor.predict(features_ood[0], preds_ood)
+        case 'softmax':
+            scores_test = monitor.predict(softmax_test)
+            scores_ood  = monitor.predict(softmax_ood)
+        case 'logits':
+            scores_test = monitor.predict(logits_test)
+            scores_ood  = monitor.predict(logits_ood)
+        case _:
+            scores_test = None
+            scores_ood  = None
+    if config['is_infer_timed']:
+        t1_infer = time.time()
 
-    # Get the perfect precision, recall and f1-score
-    prec_star, recall_star, f1_star = eval_oms.get_metrics()
+    if 'aupr_score' in config['evaluation_metrics']:
+        results['aupr_score'] = evaluator.get_aupr_score(scores_test, scores_ood)
+    if 'auroc_score' in config['evaluation_metrics']:
+        results['auroc_score'] = evaluator.get_auroc_score(scores_test, scores_ood)
+    if 'tnr_frac_tpr' in config['evaluation_metrics']:
+        results['tnr_frac_tpr'] = evaluator.get_tnr_frac_tpr(scores_test, scores_ood)  
+    if 'f1opt_scores' in config['evaluation_metrics']:
+        prec, recall, f1 = evaluator.get_metrics_at_f1_opt(scores_test, scores_ood)
+        results['f1'] = f1
+        results['prec'] = prec
+        results['recall'] = recall
 
-    
+    if config['is_train_timed']:
+        train_timing = t1_train - t0_train
+        results['train_time'] = train_timing
+    if config['is_infer_timed']:
+        infer_timing = t1_infer - t0_infer
+        results['infer_time'] = infer_timing
 
-def evaluate_all_scenarios(
-        all_models,
-        all_monitored_layers_ids,
-        all_id_datasets,
-        all_ood_datasets,
-        all_perturbations,
-        all_adver_attacks,
-        all_eval_settings,
-        all_monitors,
-):
-    """
-    """
-    for i in range(len(all_models)):
-        model = all_models[i]
-        layer_ids = all_monitored_layers_ids[i]
-
-        for j in range(len(all_id_datasets)):
-            id_dataset = all_id_datasets[j]
-
-            for k in range(len(all_ood_datasets)):
-                ood_dataset = all_ood_datasets[k]
-
-                ## Evaluate the monitors with OOD as novelty
-
-            for k in range(len(all_perturbations)):
-                ood_dataset = id_dataset
-                data_transforms = all_perturbations[k]
-
-                ## Evaluate the monitors with OOD as cov shift
-
-            for k in range(len(all_adver_attacks)):
-                ood_dataset = id_dataset
-                data_adv_attack = all_adver_attacks[k]
-
-                ## Evaluate the monitors with OOD as adv attacks
-
-
+    return results

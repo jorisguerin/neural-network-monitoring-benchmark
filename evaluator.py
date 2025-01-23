@@ -1,8 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from numba import jit
 
-from sklearn.metrics import roc_auc_score, average_precision_score, PrecisionRecallDisplay, RocCurveDisplay
+from sklearn.metrics import roc_auc_score, average_precision_score
+from sklearn.metrics import PrecisionRecallDisplay, RocCurveDisplay
 from sklearn.metrics import precision_score, recall_score, f1_score
 
 
@@ -13,10 +13,10 @@ class Evaluator:
 
         self.is_novelty = is_novelty
 
-        self.monitor_y_pred = None  # The predictions of the monitor (whether we trust or not)
-        self.monitor_y_true = None  # The true labels for the monitor
-        self.model_y_pred = None    # The model predictions
-        self.model_y_true = None    # The model true labels
+        self.preds  = None  # What the model predicted
+        self.labels = None  # What the model should have predicted
+        self.scores = None  # What the monitor predicts (whether we trust or not)
+        self.y_true = None  # What the monitor should predict
 
     def fit_ground_truth(
             self, 
@@ -29,66 +29,67 @@ class Evaluator:
         Sets what the perfect monitor should output.
         """
         if self.setting == "ood":
-            self.monitor_y_true = np.array([0] * model_labels_id.shape[0] + [1] * model_labels_ood.shape[0])
+            self.y_true = np.array([0] * model_labels_id.shape[0] + [1] * model_labels_ood.shape[0])
         else:
-            self.model_y_true = np.concatenate([model_labels_id, model_labels_ood])
-            self.model_y_pred = np.concatenate([model_preds_id, model_preds_ood])
-            self.monitor_y_true = self.model_y_true != self.model_y_pred
+            self.labels = np.concatenate([model_labels_id, model_labels_ood])
+            self.preds = np.concatenate([model_preds_id, model_preds_ood])
+            self.y_true = self.labels != self.preds
             if self.is_novelty:
-                self.monitor_y_true[model_labels_id.shape[0]:] = np.ones(model_labels_ood.shape[0])
+                self.y_true[model_labels_id.shape[0]:] = np.ones(model_labels_ood.shape[0])
 
-    def get_metrics_f1opt(
-            self, 
-            monitor_scores_id, 
-            monitor_scores_ood
-    ):
+    def get_metrics_at_f1_opt(self, scores_id, scores_ood):
         """
-        Computes the metrics for optimal f1score threshold when calculated:
+        Computes the metrics for optimal f1 score threshold when calculated:
         - precision
         - recall
         - f1 score
-        """
-        self.monitor_y_pred = np.concatenate([monitor_scores_id, monitor_scores_ood])
 
-        if self.monitor_y_pred.dtype == "bool":
-            recall = recall_score(self.monitor_y_true, self.monitor_y_pred)
-            prec = precision_score(self.monitor_y_true, self.monitor_y_pred)
-            f1 = f1_score(self.monitor_y_true, self.monitor_y_pred)
+        :param scores_id:   The scores for the ID dataset
+        :param scores_ood:  The scores for the OOD dataset
+        """
+        self.scores = np.concatenate([scores_id, scores_ood])
+
+        if self.scores.dtype == "bool":
+            recall = recall_score(self.y_true, self.scores)
+            prec = precision_score(self.y_true, self.scores)
+            f1 = f1_score(self.y_true, self.scores)
         else:
-            thresh, f1, prec, recall, _, _, _ = get_optimal_threshold_f1(self.monitor_y_pred, self.monitor_y_true)
+            thresh, f1, prec, recall, _, _, _ = get_optimal_threshold_f1(self.scores, self.y_true)
         return prec, recall, f1
 
-    def get_metric_aupr(self, scores_id, scores_ood):
+    def get_aupr_score(self, scores_id, scores_ood):
         """
+        :param scores_id:   The scores for the ID dataset
+        :param scores_ood:  The scores for the OOD dataset
         """
-        self.monitor_y_pred = np.concatenate([scores_id, scores_ood])
-
-        if self.monitor_y_pred.dtype == "bool":
+        self.scores = np.concatenate([scores_id, scores_ood])
+        if self.scores.dtype == "bool":
             raise ValueError("Scores must be continuous values, not booleans")
         else:
-            return average_precision_score(self.monitor_y_true, self.monitor_y_pred)
+            return average_precision_score(self.y_true, self.scores)
 
-    def get_metric_auroc(self, scores_id, scores_ood):
+    def get_auroc_score(self, scores_id, scores_ood):
         """
+        :param scores_id:   The scores for the ID dataset
+        :param scores_ood:  The scores for the OOD dataset
         """
-        self.monitor_y_pred = np.concatenate([scores_id, scores_ood])
-
-        if self.monitor_y_pred.dtype == "bool":
+        self.scores = np.concatenate([scores_id, scores_ood])
+        if self.scores.dtype == "bool":
             raise ValueError("Scores must be continuous values, not booleans")
         else:
-            return roc_auc_score(self.monitor_y_true, self.monitor_y_pred)
+            return roc_auc_score(self.y_true, self.scores)
 
-    def get_metric_tnr_frac_tpr(self, scores_id, scores_ood, frac=0.95):
+    def get_tnr_frac_tpr(self, scores_id, scores_ood, frac=0.95):
         """
         """
-        self.monitor_y_pred = np.concatenate([scores_id, scores_ood])
+        self.scores = np.concatenate([scores_id, scores_ood])
 
-        if self.monitor_y_pred.dtype == "bool":
+        if self.scores.dtype == "bool":
             raise ValueError("Scores must be continuous values, not booleans")
         else:
             if self.setting == "oms":
-                scores_OK = self.monitor_y_pred[self.monitor_y_true == 1]
-                scores_KO = self.monitor_y_pred[self.monitor_y_true == 0]
+                scores_OK = self.scores[self.y_true == 1]
+                scores_KO = self.scores[self.y_true == 0]
                 scores_OK.sort()
 
                 limit = scores_OK[int((1-frac)*len(scores_OK))]
@@ -104,9 +105,30 @@ class Evaluator:
                 tnr = exclu / total
             return tnr
 
+    @staticmethod
+    def compute_aupr_score(scores, y_true):
+        return average_precision_score(y_true, scores)
+
+    @staticmethod
+    def compute_auroc_score(scores, y_true):
+        return roc_auc_score(y_true, scores)
+
+    @staticmethod
+    def compute_tnr_frac_tpr(scores, y_true, frac=0.95):
+        scores_OK = scores[y_true == 1]
+        scores_KO = scores[y_true == 0]
+
+        scores_OK.sort()
+        limit = scores_OK[int((1 - frac) * len(scores_OK))]
+        exclu = np.count_nonzero(scores_KO >= limit)
+        total = scores_KO.shape[0]
+
+        tnr = 1 - (exclu / total)
+        return tnr
+
     def _neg_f1(self, threshold):
-        y_pred = self.monitor_y_pred <= threshold
-        f1 = f1_score(self.monitor_y_true, y_pred)
+        y_pred = self.scores <= threshold
+        f1 = f1_score(self.y_true, y_pred)
 
         return -f1
 
@@ -198,37 +220,3 @@ def plot_precision_recall_curve_oms(scores_test, scores_ood, labels_test, labels
     y_true = labs != preds
 
     return PrecisionRecallDisplay.from_predictions(y_true, y)
-
-
-def compute_tnr_frac_tpr(scores, labels, preds, frac=0.95):
-    """
-    General computation of the TNR with fixed TPR frac.
-    """
-    y_OK = labels != preds
-    y_KO = labels == preds
-
-    scores_OK = scores[y_OK]
-    scores_KO = scores[y_KO]
-
-    scores_OK.sort()
-    limit = scores_OK[int((1 - frac) * len(scores_OK))]
-    exclu = np.count_nonzero(scores_KO >= limit)
-    total = scores_KO.shape[0]
-
-    tnr = 1 - (exclu / total)
-    return tnr
-
-
-def compute_aupr(scores, labels, model_y_pred):
-    """
-    General computation of the Average-Precision score (AUPR)
-    """
-    y_true = labels != model_y_pred
-    return average_precision_score(y_true, scores)
-
-
-def compute_auroc(scores, labels, preds):
-    """
-    """
-    y_true = labels != preds
-    return roc_auc_score(y_true, scores)

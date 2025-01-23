@@ -10,34 +10,49 @@ from Params.params_monitors import *
 from Params.params_networks import *
 
 
-class GaussianMixtureMonitor(BaseMonitor):
-    def __init__(self, dataset, network, layer_index, n_components="auto_knee", constraint="full", is_cv=True):
+class GMMMonitor(BaseMonitor):
+    def __init__(self, dataset, network, layer_index, n_components="auto_knee", t_covariance="diag", is_cv=True):
         """
         :param dataset:
         :param network:
         :param layer_index:
-        :param n_components: Either an integer or "auto_knee" or "auto_bic" or
-                             a list of integer of the same size as the number of classes
-        :param constraint: Either "full", "diag", "tied", "spherical" or "auto_bic" or a list of string constraints
+        :param n_components: Either 
+            - an integer (common value for all GMs), 
+            - a list of integers (same size as the number of classes), 
+            - "auto_aic" (AIC optim),
+            - "auto_bic" (BIC optim),
+            - "auto_knee".
+        :param t_covariance: Either 
+            - "full" (each component has its own general cov matrix), 
+            - "diag" (each component has its own diagonal cov matrix), 
+            - "tied" (all components share the same general cov matrix), 
+            - "spherical" (each component has its own single variance),
+            - "auto_bic",
+            - a list of string constraints
         :param is_cv: if n_components or constraint are tuned automatically, is_cv will determine whether
                       the training set should be split for the hyperparameter tuning procedure
         """
         self.dataset = dataset
         self._check_accepted_datasets()
 
-        self.n_comp_type = n_components
-        self.constr_type = constraint
+        self.n_components_type = n_components
+        self.t_covariance_type = t_covariance
         self._check_accepted_params()
 
         self.n_classes = n_classes_dataset[dataset]
-        self.n_comp = None
-        self.constr = None
+        self.n_components = None
+        self.t_covariance = None
         self.is_cv = is_cv
         self.gmm = None
 
         layer_name = list(layers[network].items())[layer_index][0]
-        self.file_name = f"{path_to_saved_monitors}gmm_{n_components}_{constraint}_{dataset}_{network}_{layer_name}.p"
-
+        self.file_name = path_to_saved_monitors + "gmm_%s_%s_%s_%s_%s.p" % (
+            n_components, 
+            t_covariance, 
+            dataset, 
+            network, 
+            layer_name
+        )
 
     def fit(self, X, y_pred=None, y_true=None, use_only_correct=True, save=True):
         """
@@ -60,10 +75,10 @@ class GaussianMixtureMonitor(BaseMonitor):
         if os.path.exists(self.file_name) and save:
             self.gmm = self._load_params(self.file_name)
         else:
-            self.n_comp, self.constr = self._tune_hyperparameters(X, y_pred)
+            self.n_components, self.t_covariance = self._tune_hyperparameters(X, y_pred)
             self.gmm = []
             for i in range(self.n_classes):
-                gm = GaussianMixture(n_components=self.n_comp[i], covariance_type=self.constr[i])
+                gm = GaussianMixture(n_components=self.n_components[i], covariance_type=self.t_covariance[i])
                 self.gmm.append(gm.fit(X[y_pred == i]))
             if save:
                 self._save_params(self.gmm, self.file_name)
@@ -81,70 +96,87 @@ class GaussianMixtureMonitor(BaseMonitor):
             raise ValueError("Accepted datasets are: %s" % str(accepted_dataset)[1:-1])
 
     def _check_accepted_params(self):
-        if not np.issubdtype(type(self.n_comp_type), np.integer):
-            if (type(self.n_comp_type) is not list) and (self.n_comp_type not in accepted_n_comp):
+        if not np.issubdtype(type(self.n_components_type), np.integer):
+            if (type(self.n_components_type) is not list) and (self.n_components_type not in accepted_n_components):
                 raise ValueError("Accepted n_components values are either int, list of ints or one of: %s"
-                                 % str(accepted_n_comp)[1:-1])
-        if type(self.constr_type) is not list:
-            if self.constr_type not in accepted_constr:
-                raise ValueError("Accepted constraint values are : %s"
-                                 % str(accepted_constr)[1:-1])
+                                 % str(accepted_n_components)[1:-1])
+        if type(self.t_covariance_type) is not list:
+            if self.t_covariance_type not in accepted_t_covariance:
+                raise ValueError("Accepted t_covariance values are : %s"
+                                 % str(accepted_t_covariance)[1:-1])
 
     def _tune_hyperparameters(self, features, predictions):
-        if type(self.n_comp_type) is list:
-            n_components = self.n_comp_type
-        elif np.issubdtype(type(self.n_comp_type), np.integer):
-            values_n_comp = [self.n_comp_type]
-            n_components = [self.n_comp_type] * self.n_classes
-        else:
-            values_n_comp = gmm_n_comp_values
+        """
+        Optimize the GMM parameters w.r.t. the features and predictions,
+        depending on the optimization criterion selected.
+        """
+        # Initialize the params for the number of components
+        if type(self.n_components_type) is list and len(self.n_components_type) == len(self.n_classes):
+            n_components = self.n_components_type
+        elif np.issubdtype(type(self.n_components_type), np.integer):
+            values_n_components = [self.n_components_type]
+            n_components = [self.n_components_type] * self.n_classes
+        else: # auto_something
+            values_n_components = gmm_n_components_values
             n_components = []
 
-        if type(self.constr_type) is list:
-            constraints = self.constr_type
-        elif "auto" not in self.constr_type:
-            values_constraints = [self.constr_type]
-            constraints = [self.constr_type] * self.n_classes
-        else:
-            values_constraints = gmm_constr_values
-            constraints = []
+        # Initialize the params for the type of covariance
+        if type(self.t_covariance_type) is list and len(self.t_covariance_type) == len(self.n_classes):
+            t_covariance = self.t_covariance_type
+        elif "auto" not in self.t_covariance_type:
+            values_t_covariance = [self.t_covariance_type]
+            t_covariance = [self.t_covariance_type] * self.n_classes
+        else: # auto_something
+            values_t_covariance = gmm_t_covariance_values
+            t_covariance = []
 
-        if min(len(n_components), len(constraints)) == 0:
-            if "auto_bic" in [self.constr_type, self.n_comp_type]:
+        # If there is a need to optimize either one of the params
+        if min(len(n_components), len(t_covariance)) == 0:
+            if self.n_components_type == "auto_aic":
+                select_type = "auto_aic"
+            elif self.n_components_type == "auto_bic" or self.t_covariance_type == "auto_bic":
                 select_type = "auto_bic"
             else:
-                select_type = "auto_knee"
+                select_type = "auto_knee"         
+
             for i in range(self.n_classes):
-                # print("\n", i, "\n")
                 combination = []
-                bic, total_score = [], []
-                for vc in values_constraints:
-                    for n in values_n_comp:
-                        combination.append([vc, n])
-                        gmm = GaussianMixture(n_components=n, covariance_type=vc)
+                aic = []  # To store the AIC scores
+                bic = []  # To store the BIC scores
+                total_score = []  # To store the LogLikelihood scores
+
+                # Grid-search selection 'alamano'.
+                for tcov in values_t_covariance:
+                    for ncmp in values_n_components:
+                        combination.append([tcov, ncmp])
+                        gm = GaussianMixture(n_components=ncmp, covariance_type=tcov)
+
                         if self.is_cv:
-                            val_split = int(4 * features[predictions == i].shape[0] / 5)
-                            gmm.fit(features[predictions == i][:val_split])
-                            bic.append(gmm.bic(features[predictions == i][val_split:]))
-                            total_score.append(gmm.score(features[predictions == i][val_split:]))
+                            val_split = int(4 * features[predictions == i].shape[0] / 5) # Train/test cut at 4/5 of the dataset
+                            gm.fit(features[predictions == i][:val_split])
+                            aic.append(gm.aic(features[predictions == i][val_split:]))
+                            bic.append(gm.bic(features[predictions == i][val_split:]))
+                            total_score.append(gm.score(features[predictions == i][val_split:]))
                         else:
-                            gmm.fit(features[predictions == i])
-                            bic.append(gmm.bic(features[predictions == i]))
-                            total_score.append(gmm.score(features[predictions == i]))
+                            gm.fit(features[predictions == i])
+                            aic.append(gm.aic(features[predictions == i]))
+                            bic.append(gm.bic(features[predictions == i]))
+                            total_score.append(gm.score(features[predictions == i]))
+
+                if select_type == "auto_bic":
+                    selected_t_covariance, selected_n_components = combination[np.argmin(bic)]
+                if select_type == "auto_aic":
+                    selected_t_covariance, selected_n_components = combination[np.argmin(aic)]
                 if select_type == "auto_knee":
-                    selected_constraint = values_constraints[0]
-                    kneedle = KneeLocator(values_n_comp, total_score)
-                    selected_n_comp = kneedle.knee
-                    # print("total score", total_score)
-                    # print("ncomp", selected_n_comp)
-                else:
-                    selected_constraint, selected_n_comp = combination[np.argmin(bic)]
-                    # print(selected_constraint, selected_n_comp)
+                    cov_idx = 0 if len(values_t_covariance) == 1 else i
+                    selected_t_covariance = values_t_covariance[cov_idx]
+                    kneedle = KneeLocator(values_n_components, total_score)
+                    selected_n_components = kneedle.knee
 
-                n_components.append(selected_n_comp)
-                constraints.append(selected_constraint)
+                n_components.append(selected_n_components)
+                t_covariance.append(selected_t_covariance)
 
-        return n_components, constraints
+        return n_components, t_covariance
 
     @staticmethod
     def _save_params(gmm, file_name):
@@ -157,5 +189,4 @@ class GaussianMixtureMonitor(BaseMonitor):
         pf = open(file_name, 'rb')
         gmm = pickle.load(pf)
         pf.close()
-
         return gmm
