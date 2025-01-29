@@ -9,9 +9,9 @@ import sys
 import torch
 from sklearn.metrics import accuracy_score
 
-## Adjuste PATH variable to launch script from project root ##
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-## -------------------------------------------------------- ##
+# ## Adjuste PATH variable to launch script from project root ##
+# sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+# ## -------------------------------------------------------- ##
 
 from dataset import Dataset
 from feature_extractor import FeatureExtractor
@@ -46,7 +46,7 @@ path_to_results_file = path_to_save_results + "full_results_v1.csv"
 if not os.path.exists(path_to_save_results):
     os.makedirs(path_to_save_results)
 
-f = open(path_to_results_file, "w", encoding="UTF8")
+f = open(path_to_results_file, "w", newline='', encoding="UTF8")
 writer = csv.writer(f)
 header = [
     "Network", "Network Layer",
@@ -57,9 +57,11 @@ header = [
     "Precision OMS", "Recall OMS", "F1 OMS"
 ]
 writer.writerow(header)
+f.close()
 
 
 def evaluate_monitors(
+        file_to_save_results,
         network,
         network_layers,
         dataset_ID,
@@ -67,6 +69,9 @@ def evaluate_monitors(
         perturbation=None,
         adver_attack=None,
 ):
+    f = open(file_to_save_results, "a", newline='', encoding="UTF8")
+    writer = csv.writer(f)
+    
     dataset_train = Dataset(dataset_ID, "train", network, batch_size=batch_size)
     dataset_test = Dataset(dataset_ID, "test", network, batch_size=batch_size)
     dataset_ood = Dataset(dataset_OOD, "test", network, perturbation, adver_attack, batch_size=batch_size)
@@ -198,8 +203,8 @@ def evaluate_monitors(
 
     # Evaluate OTB
     for i_layer in range(len(network_layers)):
-        monitor = OTBMonitor(n_clusters=10)
-        monitor.fit(features_train[i_layer], pred_train, lab_train, save=False)
+        monitor = OTBMonitor(dataset_ID, network, i_layer, n_clusters=10)
+        monitor.fit(features_train[i_layer], pred_train, lab_train, save=True)
 
         scores_test = monitor.predict(features_test[i_layer], pred_test)
         scores_ood  = monitor.predict(features_ood[i_layer], pred_ood)
@@ -220,7 +225,7 @@ def evaluate_monitors(
     # Evaluate Maha
     for i_layer in range(len(network_layers)):
         monitor = MahalanobisMonitor(dataset_ID, network, i_layer, is_tied=True)
-        monitor.fit(features_train[i_layer], pred_train, lab_train, save=False)
+        monitor.fit(features_train[i_layer], pred_train, lab_train, save=True)
 
         scores_test = monitor.predict(features_test[i_layer], pred_test)
         scores_ood  = monitor.predict(features_ood[i_layer], pred_ood)
@@ -233,10 +238,12 @@ def evaluate_monitors(
             dataset_ID, dataset_OOD, str(perturbation), str(adver_attack),
             accuracy_id, accuracy_ood,
             prec_star, recall_star, f1_star,
-            "OTB",
+            "Maha",
             prec_ood, recall_ood, f1_ood,
             prec_oms, recall_oms, f1_oms]
         writer.writerow(result)
+    
+    f.close()
 
 
 # def _evaluate_MSP(
@@ -274,6 +281,7 @@ for i_network in range(len(all_networks)):
 
             print("Evaluating %s, for dataset %s and OOD dataset %s." % (network, dataset, (dataset_ood, None, None)), flush=True)
             evaluate_monitors(
+                path_to_results_file,
                 network, network_layers,
                 dataset, dataset_ood
             )
@@ -285,6 +293,7 @@ for i_network in range(len(all_networks)):
 
             print("Evaluating %s, for dataset %s and OOD dataset %s." % (network, dataset, (dataset_ood, perturbation, None)), flush=True)
             evaluate_monitors(
+                path_to_results_file,
                 network, network_layers,
                 dataset, dataset_ood,
                 perturbation=perturbation
@@ -297,9 +306,8 @@ for i_network in range(len(all_networks)):
 
             print("Evaluating on %s, for dataset %s and OOD dataset %s." % (network, dataset, (dataset_ood, None, adver_attack)), flush=True)
             evaluate_monitors(
+                path_to_results_file,
                 network, network_layers,
                 dataset, dataset_ood,
                 adver_attack=adver_attack
             )
-
-f.close()
