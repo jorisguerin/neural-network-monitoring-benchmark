@@ -85,7 +85,7 @@ class MahalanobisMonitor(BaseMonitor):
                         X[indices][y_pred[indices] == i], self.mean[i], self.precision[i])
                 scores_int[y_pred[indices] == i] = maha_squared
             scores[indices] = scores_int
-        return -scores
+        return scores
 
     def _check_accepted_datasets(self):
         datasets_lst = list(n_classes_dataset.keys())
